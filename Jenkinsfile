@@ -1,49 +1,93 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    COMPOSE_PROJECT_NAME = 'recipeapp'
-  }
-
-  stages {
-    stage('Checkout') {
-      steps {
-        git branch: 'main', url: 'https://github.com/harishreelakshmanakumar/Main_Devops.git'
-      }
+    environment {
+        COMPOSE_PROJECT_NAME = 'recipeapp'
+        DOCKER_COMPOSE_OPTS = '-T'  // Disable TTY allocation
     }
 
-    stage('Build Docker Images') {
-      steps {
-        echo '🔧 Building Docker images (no cache)...'
-        sh 'docker-compose build --no-cache'
-      }
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', 
+                    url: 'https://github.com/harishreelakshmanakumar/Main_Devops.git'
+            }
+        }
+
+        stage('Build Docker Images') {
+            steps {
+                script {
+                    try {
+                        echo '🔧 Building Docker images (no cache)...'
+                        sh 'docker-compose build --no-cache'
+                    } catch (Exception e) {
+                        error "Docker build failed: ${e.getMessage()}"
+                    }
+                }
+            }
+        }
+
+        stage('Run Containers') {
+            steps {
+                script {
+                    try {
+                        echo '🛑 Stopping old containers...'
+                        sh 'docker-compose down --remove-orphans || true'
+
+                        echo '🚀 Starting new containers...'
+                        sh 'docker-compose up -d'
+                        
+                        // Wait for containers to be healthy
+                        sh '''
+                            echo "⏳ Waiting for containers to be ready..."
+                            sleep 15
+                            docker-compose ps
+                        '''
+                    } catch (Exception e) {
+                        error "Container deployment failed: ${e.getMessage()}"
+                    }
+                }
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                script {
+                    try {
+                        echo '🧪 Running backend tests...'
+                        sh '''
+                            docker-compose exec -T backend npm test || {
+                                echo "⚠️ Tests failed"
+                                exit 1
+                            }
+                        '''
+                    } catch (Exception e) {
+                        unstable "Tests failed: ${e.getMessage()}"
+                    }
+                }
+            }
+        }
     }
 
-    stage('Run Containers') {
-      steps {
-        echo '🛑 Stopping old containers...'
-        sh 'docker-compose down || true'  // Avoid errors if no containers are running
-
-        echo '🚀 Starting new containers...'
-        sh 'docker-compose up -d'
-      }
+    post {
+        success {
+            echo '✅ Application successfully deployed!'
+        }
+        unstable {
+            echo '⚠️ Build completed with test failures'
+        }
+        failure {
+            echo '❌ Deployment failed'
+        }
+        always {
+            script {
+                try {
+                    echo '🧹 Cleaning up...'
+                    sh 'docker-compose down --remove-orphans'
+                } catch (Exception e) {
+                    echo "Cleanup warning: ${e.getMessage()}"
+                }
+            }
+        }
     }
-
-    stage('Run Tests') {
-      steps {
-        echo '🧪 Running backend tests...'
-        // Gracefully skip tests if backend isn't ready
-        sh 'docker-compose exec backend sh -c "npm test || echo Test failed or container not ready"'
-      }
-    }
-  }
-
-  post {
-    success {
-      echo '✅ Application successfully deployed!'
-    }
-    failure {
-      echo '❌ Deployment failed.'
-    }
-  }
 }
