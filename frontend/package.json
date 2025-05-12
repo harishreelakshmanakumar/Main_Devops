@@ -1,0 +1,22 @@
+{
+  "name": "scrim_s06ipc4",
+  "description": "https://scrimba.com/learn-react-c0e/~0xm2",
+  "scripts": {
+    "start": "vite",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "react-scripts test"
+  },
+  "dependencies": {
+    "axios": "^1.8.4",
+    "docker": "^1.0.0",
+    "dotenv": "^16.5.0",
+    "react": "19.0.0-rc-8b08e99e-20240713",
+    "react-dom": "19.0.0-rc-8b08e99e-20240713",
+    "vite": "latest"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.4.1"
+  }
+}
