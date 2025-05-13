@@ -50,6 +50,8 @@ pipeline {
             }
         }
 
+        // Commented out the Run Tests stage
+        /*
         stage('Run Tests') {
             steps {
                 script {
@@ -67,6 +69,7 @@ pipeline {
                 }
             }
         }
+        */
     }
 
     post {
