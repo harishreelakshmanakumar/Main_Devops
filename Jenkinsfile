@@ -19,7 +19,9 @@ pipeline {
                 script {
                     try {
                         echo '🔧 Building Docker images (no cache)...'
-                        sh 'docker-compose build --no-cache'
+                        dir('.') {
+                            sh 'docker-compose build --no-cache'
+                        }
                     } catch (Exception e) {
                         error "Docker build failed: ${e.getMessage()}"
                     }
@@ -32,17 +34,18 @@ pipeline {
                 script {
                     try {
                         echo '🛑 Stopping old containers...'
-                        sh 'docker-compose down --remove-orphans || true'
+                        dir('.') {
+                            sh 'docker-compose down --remove-orphans || true'
 
-                        echo '🚀 Starting new containers...'
-                        sh 'docker-compose up -d'
-                        
-                        // Wait for containers to be healthy
-                        sh '''
-                            echo "⏳ Waiting for containers to be ready..."
-                            sleep 15
-                            docker-compose ps
-                        '''
+                            echo '🚀 Starting new containers...'
+                            sh 'docker-compose up -d'
+
+                            echo '⏳ Waiting for containers to be ready...'
+                            sh '''
+                                sleep 15
+                                docker-compose ps
+                            '''
+                        }
                     } catch (Exception e) {
                         error "Container deployment failed: ${e.getMessage()}"
                     }
@@ -50,19 +53,21 @@ pipeline {
             }
         }
 
-        // Commented out the Run Tests stage
+        // Optional test stage
         /*
         stage('Run Tests') {
             steps {
                 script {
                     try {
                         echo '🧪 Running backend tests...'
-                        sh '''
-                            docker-compose exec -T backend npm test || {
-                                echo "⚠️ Tests failed"
-                                exit 1
-                            }
-                        '''
+                        dir('.') {
+                            sh '''
+                                docker-compose exec -T backend npm test || {
+                                    echo "⚠️ Tests failed"
+                                    exit 1
+                                }
+                            '''
+                        }
                     } catch (Exception e) {
                         unstable "Tests failed: ${e.getMessage()}"
                     }
@@ -86,7 +91,9 @@ pipeline {
             script {
                 try {
                     echo '🧹 Cleaning up...'
-                    sh 'docker-compose down --remove-orphans'
+                    dir('.') {
+                        sh 'docker-compose down --remove-orphans'
+                    }
                 } catch (Exception e) {
                     echo "Cleanup warning: ${e.getMessage()}"
                 }
